@@ -91,7 +91,17 @@ async function run() {
         .send({ success: true });
     })
 
+    app.get('/all-jobs', async (req, res) => {
+      const result = await JobCollection.find().toArray();
+      res.send(result);
+    })
 
+    app.post('/all-jobs', async (req, res) => {
+      const jobData = req.body;
+      console.log(jobData);
+      const result = await JobCollection.insertOne(jobData);
+      res.send(result);
+    })
 
 
 
