@@ -114,6 +114,29 @@ async function run() {
       res.send(result)
     })
 
+    app.get('/job/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await JobCollection.findOne(query);
+      res.send(result);
+    })
+
+    app.get('/jobs', async (req, res) => {
+      const search = req.query.search;
+      console.log(search);
+      const query = {
+        job_title: { $regex: search, $options: 'i' },
+      }
+      const result = await JobCollection.find(query).toArray();
+      res.send(result)
+    })
+
+
+
+
+
+
+
     // update a job in db
     app.put('/update-job/:id', async (req, res) => {
       const id = req.params.id
