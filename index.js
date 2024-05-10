@@ -34,7 +34,7 @@ const client = new MongoClient(uri, {
 
 
 const logger = (req, res, next) => {
-  console.log('log info', req.method, req.url);
+
   next();
 }
 const verifyToken = (req, res, next) => {
@@ -70,13 +70,9 @@ async function run() {
 
 
 
-
-
-
-
     app.post('/jwt', async (req, res) => {
       const user = req.body;
-      console.log('User for token', user);
+
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
       res
         .cookie('token', token, cookieOptions)
@@ -86,7 +82,7 @@ async function run() {
 
     app.post('/logout', async (req, res) => {
       const user = req.user;
-      console.log('from logout', user);
+
       res.clearCookie("token", { ...cookieOptions, maxAge: 0 })
         .send({ success: true });
     })
@@ -106,15 +102,41 @@ async function run() {
     // Get My Jobs Data By Email
     app.get("/my-job-list", logger, verifyToken, async (req, res) => {
       console.log(req.query?.email);
-      console.log(req.user);
+      console.log('From my list', req.user);
       if (req.query.email !== req.user.email) {
         return res.status(403).send({ message: 'Forbidden excess' })
       }
       let query = {};
       if (req.query?.email) {
-        query = { email: req.query.email }
+        const query = { 'employer.email': req.query?.email }
       }
-      const result = await touristSpotCollection.find(query).toArray();
+      const result = await JobCollection.find(query).toArray();
+      res.send(result)
+    })
+
+    // update a job in db
+    app.put('/update-job/:id', async (req, res) => {
+      const id = req.params.id
+      const jobData = req.body
+      const query = { _id: new ObjectId(id) }
+      const options = { upsert: true }
+      const updateDoc = {
+        $set: {
+          ...jobData,
+        },
+      }
+      const result = await JobCollection.updateOne(query, updateDoc, options)
+      res.send(result)
+    })
+
+
+
+
+    // Delete a Jobs by id here
+    app.delete("/delete-job/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await JobCollection.deleteOne(query);
       res.send(result)
     })
 
