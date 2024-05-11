@@ -74,7 +74,7 @@ async function run() {
     app.post('/jwt', async (req, res) => {
       const user = req.body;
 
-      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d' })
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '365d', })
       res
         .cookie('token', token, cookieOptions)
         .send({ success: true })
@@ -129,10 +129,10 @@ async function run() {
       if (req.query.email !== req.user.email) {
         return res.status(403).send({ message: 'Forbidden excess' })
       }
-      let query = {};
-      if (req.query?.email) {
-        const query = { 'employer.email': req.query?.email }
-      }
+
+
+      const query = { employerEmail: req.query?.email }
+
       const result = await JobCollection.find(query).toArray();
       res.send(result)
     })
@@ -142,16 +142,19 @@ async function run() {
 
     // Get My Jobs Data By Email
     app.get("/my-application-list", logger, verifyToken, async (req, res) => {
-      console.log(req.query?.email);
-      console.log('From my list', req.user);
+
+
+
+      console.log(req.query?.email, req.query?.filter);
       if (req.query.email !== req.user.email) {
         return res.status(403).send({ message: 'Forbidden excess' })
       }
-      let query = {};
-      if (req.query?.email) {
-        const query = { 'applicant.email': req.query?.email }
-      }
-      const result = await applicationCollection.find(query).toArray();
+      let query = {
+        applicantEmail: req.query?.email
+      };
+      if (req.query?.filter) query.category = req.query?.filter;
+      const options = {};
+      const result = await applicationCollection.find(query, options).toArray();
       res.send(result)
     })
 
@@ -175,9 +178,7 @@ async function run() {
       const alreadyApplied = await applicationCollection.findOne(query)
       console.log('already', alreadyApplied)
       if (alreadyApplied) {
-        return res
-          .status(400)
-          .send('You have already applied this job.')
+        return res.send({ message: 'You have already applied this job.' })
       }
 
       const result = await applicationCollection.insertOne(applicantData);
