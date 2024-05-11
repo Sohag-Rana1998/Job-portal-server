@@ -6,7 +6,7 @@ const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174'],
+  origin: ['http://localhost:5173', 'https://job-portal-website-b20fb.web.app'],
   credentials: true
 }));
 app.use(express.json());
@@ -34,7 +34,7 @@ const client = new MongoClient(uri, {
 
 
 const logger = (req, res, next) => {
-
+  console.log('log info', req.method, req.url);
   next();
 }
 const verifyToken = (req, res, next) => {
@@ -67,13 +67,14 @@ async function run() {
     // await client.connect();
 
     const JobCollection = client.db("allJobsDB").collection("jobs");
+    const applicationCollection = client.db("allJobsDB").collection("application");
 
 
 
     app.post('/jwt', async (req, res) => {
       const user = req.body;
 
-      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d' })
       res
         .cookie('token', token, cookieOptions)
         .send({ success: true })
@@ -89,7 +90,7 @@ async function run() {
 
     app.get('/all-jobs', async (req, res) => {
       // const sort = req.query.sort;
-      const page = parseInt(req.query.page);
+      const page = parseInt(req.query.page) - 1;
       const size = parseInt(req.query.size);
       const search = req.query.search;
       console.log(page, size, search);
@@ -136,6 +137,24 @@ async function run() {
       res.send(result)
     })
 
+
+
+
+    // Get My Jobs Data By Email
+    app.get("/my-application-list", logger, verifyToken, async (req, res) => {
+      console.log(req.query?.email);
+      console.log('From my list', req.user);
+      if (req.query.email !== req.user.email) {
+        return res.status(403).send({ message: 'Forbidden excess' })
+      }
+      let query = {};
+      if (req.query?.email) {
+        const query = { 'applicant.email': req.query?.email }
+      }
+      const result = await applicationCollection.find(query).toArray();
+      res.send(result)
+    })
+
     app.get('/job/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) }
@@ -144,6 +163,34 @@ async function run() {
     })
 
 
+    // Save a job data in db
+    app.post('/apply-now', async (req, res) => {
+      const applicantData = req.body
+
+      // check if its a duplicate request
+      const query = {
+        applicantEmail: applicantData.applicantEmail,
+        jobId: applicantData.jobId,
+      }
+      const alreadyApplied = await applicationCollection.findOne(query)
+      console.log('already', alreadyApplied)
+      if (alreadyApplied) {
+        return res
+          .status(400)
+          .send('You have already applied this job.')
+      }
+
+      const result = await applicationCollection.insertOne(applicantData);
+
+      // update job count in jobs collection
+      const updateDoc = {
+        $inc: { applicant_count: 1 },
+      }
+      const jobQuery = { _id: new ObjectId(applicantData.jobId) }
+      const updateJobCount = await JobCollection.updateOne(jobQuery, updateDoc)
+
+      res.send(result)
+    })
 
 
 
