@@ -68,6 +68,7 @@ async function run() {
 
     const JobCollection = client.db("allJobsDB").collection("jobs");
     const applicationCollection = client.db("allJobsDB").collection("application");
+    const blogsCollection = client.db("allJobsDB").collection("blogs");
 
 
 
@@ -162,6 +163,26 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) }
       const result = await JobCollection.findOne(query);
+      res.send(result);
+    })
+
+
+    app.get('/blogs', async (req, res) => {
+      const result = await blogsCollection.find().toArray();
+      res.send(result);
+    })
+
+    app.get('/blog/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await blogsCollection.findOne(query);
+      res.send(result);
+    })
+
+    app.get('/applicationData/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await applicationCollection.findOne(query);
       res.send(result);
     })
 
