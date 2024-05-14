@@ -6,7 +6,7 @@ const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://job-portal-website-b20fb.web.app'],
+  origin: ['http://localhost:5173', 'https://job-portal-website-b20fb.web.app', 'https://job-portal-website-b20fb.firebaseapp.com'],
   credentials: true
 }));
 app.use(express.json());
@@ -69,6 +69,7 @@ async function run() {
     const JobCollection = client.db("allJobsDB").collection("jobs");
     const applicationCollection = client.db("allJobsDB").collection("application");
     const blogsCollection = client.db("allJobsDB").collection("blogs");
+    const agentsCollection = client.db("allJobsDB").collection("AgentsDB");
 
 
 
@@ -169,6 +170,10 @@ async function run() {
 
     app.get('/blogs', async (req, res) => {
       const result = await blogsCollection.find().toArray();
+      res.send(result);
+    })
+    app.get('/agents', async (req, res) => {
+      const result = await agentsCollection.find().toArray();
       res.send(result);
     })
 
