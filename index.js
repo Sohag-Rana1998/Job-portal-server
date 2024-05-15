@@ -36,10 +36,13 @@ const client = new MongoClient(uri, {
 const logger = (req, res, next) => {
   console.log('log info', req.method, req.url);
   next();
+
 }
+
 const verifyToken = (req, res, next) => {
   const token = req?.cookies?.token;
   console.log('token:', token);
+
   if (!token) {
     return res.status(401).send({ message: 'Unauthorized access' })
   }
@@ -50,17 +53,13 @@ const verifyToken = (req, res, next) => {
     req.user = decoded
     next();
   })
-
 }
-
-
 
 const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production" ? true : false,
   sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
 };
-
 async function run() {
   try {
 
@@ -70,18 +69,16 @@ async function run() {
     const applicationCollection = client.db("allJobsDB").collection("application");
     const blogsCollection = client.db("allJobsDB").collection("blogs");
     const agentsCollection = client.db("allJobsDB").collection("AgentsDB");
-
+    const commentCollection = client.db("allJobsDB").collection("CommentDB");
 
 
     app.post('/jwt', async (req, res) => {
       const user = req.body;
-
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '365d', })
       res
         .cookie('token', token, cookieOptions)
         .send({ success: true })
     })
-
 
     app.post('/logout', async (req, res) => {
       const user = req.user;
@@ -89,6 +86,7 @@ async function run() {
       res.clearCookie("token", { ...cookieOptions, maxAge: 0 })
         .send({ success: true });
     })
+
 
     app.get('/all-jobs', async (req, res) => {
       // const sort = req.query.sort;
@@ -124,6 +122,22 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/all-comments', async (req, res) => {
+      const Id = req.query.Id;
+      console.log(Id);
+      query = { commentId: Id }
+      const result = await commentCollection.find(query).toArray();
+      res.send(result)
+    })
+
+    app.post('/comments', async (req, res) => {
+      const comments = req.body;
+
+      const result = await commentCollection.insertOne(comments);
+      res.send(result);
+    })
+
+
     // Get My Jobs Data By Email
     app.get("/my-job-list", logger, verifyToken, async (req, res) => {
       console.log(req.query?.email);
@@ -131,10 +145,7 @@ async function run() {
       if (req.query.email !== req.user.email) {
         return res.status(403).send({ message: 'Forbidden excess' })
       }
-
-
       const query = { employerEmail: req.query?.email }
-
       const result = await JobCollection.find(query).toArray();
       res.send(result)
     })
@@ -144,9 +155,6 @@ async function run() {
 
     // Get My Jobs Data By Email
     app.get("/my-application-list", logger, verifyToken, async (req, res) => {
-
-
-
       console.log(req.query?.email, req.query?.filter);
       if (req.query.email !== req.user.email) {
         return res.status(403).send({ message: 'Forbidden excess' })
@@ -173,17 +181,28 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/agents', async (req, res) => {
-      const result = await agentsCollection.find().toArray();
-      res.send(result);
-    })
-
     app.get('/blog/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) }
       const result = await blogsCollection.findOne(query);
       res.send(result);
     })
+
+    app.post('/blogs', async (req, res) => {
+      const blogData = req.body;
+      console.log(blogData);
+      const result = await blogsCollection.insertOne(blogData);
+      res.send(result);
+    })
+
+
+
+    app.get('/agents', async (req, res) => {
+      const result = await agentsCollection.find().toArray();
+      res.send(result);
+    })
+
+
 
     app.get('/applicationData/:id', async (req, res) => {
       const id = req.params.id;
